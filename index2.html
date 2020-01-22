@@ -96,11 +96,11 @@
                                     if(currentHeirarchy[foundHeader[1]] === undefined){
                                         if(currentHeirarchy[currentLevel].subsections === undefined){
                                             currentHeirarchy[currentLevel].subsections = [];
-                                            currentHeirarchy[foundHeader[1]] = {section:targetDiv.children[i].innerText};
+                                            currentHeirarchy[foundHeader[1]] = {subsection:targetDiv.children[i].innerText};
                                             currentHeirarchy[currentLevel].subsections.push(currentHeirarchy[foundHeader[1]]);
                                             currentLevel = foundHeader[1];
                                         }else{
-                                            currentHeirarchy[foundHeader[1]] = {section:targetDiv.children[i].innerText};
+                                            currentHeirarchy[foundHeader[1]] = {subsection:targetDiv.children[i].innerText};
                                             currentHeirarchy[currentLevel].subsections.push(currentHeirarchy[foundHeader[1]]);
                                             currentLevel = foundHeader[1];
                                         }
@@ -119,7 +119,7 @@
                                                     break;
                                                 }
                                             }
-                                            currentHeirarchy[foundHeader[1]] = {section:targetDiv.children[i].innerText};
+                                            currentHeirarchy[foundHeader[1]] = {subsection:targetDiv.children[i].innerText};
                                             currentHeirarchy[parentLevel].subsections.push(currentHeirarchy[foundHeader[1]]);
                                             currentLevel = foundHeader[1];
                                             for (const key in currentHeirarchy) {
@@ -135,7 +135,7 @@
                     }
                     console.log('finalJsonOutput',finalJsonOutput);
                     // console.log('currentLevel'+ currentLevel + 'current Heirarchy'+ currentHeirarchy );
-                    document.getElementById('output').innerHTML=syntaxHighlight(JSON.stringify(finalJsonOutput,null,2));
+                    document.getElementById('output').innerHTML=syntaxHighlight(JSON.stringify(finalJsonOutput,null,4));
                 })
             }
 
