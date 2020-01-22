@@ -133,8 +133,6 @@
                                 break;
                         }
                     }
-                    console.log('finalJsonOutput',finalJsonOutput);
-                    // console.log('currentLevel'+ currentLevel + 'current Heirarchy'+ currentHeirarchy );
                     document.getElementById('output').innerHTML=syntaxHighlight(JSON.stringify(finalJsonOutput,null,4));
                 })
             }
