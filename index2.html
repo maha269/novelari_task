@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+        .string { color: green; }
+        .number { color: darkorange; }
+        .boolean { color: blue; }
+        .null { color: magenta; }
+        .key { color: red; }
+    </style>
+</head>
+
+<body>
+
+    <input id="inputFile" type="file"><br><br>
+    <div id="output" style="border:1px solid black ;white-space: pre;height:calc(100vh - 100px);overflow: auto; padding: 7px;"></div>
+    
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <script>
+    $(document).ready(function() {
+
+        function syntaxHighlight(json) {
+            if (typeof json != 'string') {
+                json = JSON.stringify(json, undefined, 2);
+            }
+            json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                var cls = 'number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'key';
+                    } else {
+                        cls = 'string';
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'null';
+                }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+        }
+
+        let inputFile = document.getElementById('inputFile');
+
+        inputFile.addEventListener('change', function(event){
+            if(event.target.files && event.target.files[0]){
+                let inputFile = event.target.files[0];
+                readFileContent(inputFile).then(content => {                    
+                    let outputDiv = document.getElementById('output'),
+                        bodyContent = document.createElement('div'),
+                        bodyContentRegExp = /\<body[^>]*\>([^]*)(?=\<\/body\>)/;
+                    bodyContent.innerHTML = content.match(bodyContentRegExp)[1];
+
+                    let targetDiv = bodyContent.querySelector('.body.searchable-content div');
+
+                    let currentLevel = null ,
+                        currentHeirarchy = {},
+                        finalJsonOutput = {};
+                    let state = "initial",   //allParagraphs , mixed , initial
+                        heighestLevel = null;
+                    for (let i = 0 ; i < targetDiv.children.length ; i++) {
+                        switch(state){
+                            case "initial" :
+                                if(targetDiv.children[i].tagName === 'P' && currentLevel === null){
+                                    state = "allParagraphs";
+                                    finalJsonOutput.paragraphs = [];
+                                    finalJsonOutput.paragraphs.push(targetDiv.children[i].innerText);
+                                    continue;
+                                }
+                                var foundHeader = targetDiv.children[i].tagName.match(/H([1-6])/);
+                                if(foundHeader !== null ){
+                                    state = "mixed";
+                                    heighestLevel = foundHeader[1];
+                                    currentLevel = foundHeader[1];
+                                    finalJsonOutput.sections=[];
+                                    currentHeirarchy[currentLevel]={"section":targetDiv.children[i].innerText};
+                                    finalJsonOutput.sections.push(currentHeirarchy[currentLevel]);
+                                }
+                                break;
+                            case "allParagraphs":
+                                targetDiv.children[i].tagName === 'P' && finalJsonOutput.paragraphs.push(targetDiv.children[i].innerText);
+                                break;
+                            
+                            case "mixed":
+                                if(targetDiv.children[i].tagName === "P" ){
+                                    currentHeirarchy[currentLevel].paragraphs === undefined ? currentHeirarchy[currentLevel].paragraphs=[targetDiv.children[i].innerText] : currentHeirarchy[currentLevel].paragraphs.push(targetDiv.children[i].innerText);
+                                    continue;
+                                }
+                                var foundHeader = targetDiv.children[i].tagName.match(/H([1-6])/);
+                                if(foundHeader !== null){
+                                    if(currentHeirarchy[foundHeader[1]] === undefined){
+                                        if(currentHeirarchy[currentLevel].subsections === undefined){
+                                            currentHeirarchy[currentLevel].subsections = [];
+                                            currentHeirarchy[foundHeader[1]] = {section:targetDiv.children[i].innerText};
+                                            currentHeirarchy[currentLevel].subsections.push(currentHeirarchy[foundHeader[1]]);
+                                            currentLevel = foundHeader[1];
+                                        }else{
+                                            currentHeirarchy[foundHeader[1]] = {section:targetDiv.children[i].innerText};
+                                            currentHeirarchy[currentLevel].subsections.push(currentHeirarchy[foundHeader[1]]);
+                                            currentLevel = foundHeader[1];
+                                        }
+                                    }else{
+                                        if(foundHeader[1]===heighestLevel){
+                                            currentLevel = foundHeader[1];
+                                            currentHeirarchy={};
+                                            currentHeirarchy[currentLevel]={"section":targetDiv.children[i].innerText};
+                                            finalJsonOutput.sections.push(currentHeirarchy[currentLevel]);
+                                        }
+                                        else{
+                                            let parentLevel=foundHeader[1];
+                                            for(let i = foundHeader[1]-1;i>=heighestLevel;i--){
+                                                parentLevel=i;
+                                                if(currentHeirarchy[parentLevel] !== undefined){
+                                                    break;
+                                                }
+                                            }
+                                            currentHeirarchy[foundHeader[1]] = {section:targetDiv.children[i].innerText};
+                                            currentHeirarchy[parentLevel].subsections.push(currentHeirarchy[foundHeader[1]]);
+                                            currentLevel = foundHeader[1];
+                                            for (const key in currentHeirarchy) {
+                                                if (key > currentLevel) {
+                                                    currentHeirarchy[key]= undefined;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                break;
+                        }
+                    }
+                    console.log('finalJsonOutput',finalJsonOutput);
+                    // console.log('currentLevel'+ currentLevel + 'current Heirarchy'+ currentHeirarchy );
+                    document.getElementById('output').innerHTML=syntaxHighlight(JSON.stringify(finalJsonOutput,null,2));
+                })
+            }
+
+
+        });
+
+        function readFileContent(file) {
+            const reader = new FileReader()
+            return new Promise((resolve, reject) => {
+                reader.onload = event => resolve(event.target.result)
+                reader.onerror = error => reject(error)
+                reader.readAsText(file)
+            })
+        }
+        });                             
+    </script>
+</body>
+</html>
